@@ -116,7 +116,7 @@
   <joint name="target" type="fixed">
     <parent link="basez1"/>
     <child link="sphere"/>
-    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <origin rpy="0 0 0" xyz="0 0 -0.3"/>
   </joint>
 
 <!--Transmissions-->

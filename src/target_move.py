@@ -26,9 +26,9 @@ def move():
     y_d = 1.5* np.sin(cur_time * np.pi/5)
     z_d = 1* np.sin(cur_time * np.pi/5)
     joint1=Float64()
-    joint1.data= -1 + x_d
+    joint1.data= 2 + x_d
     joint2=Float64()
-    joint2.data= -0.5 + y_d
+    joint2.data= 2.5 + y_d
     joint3=Float64()
     joint3.data= 5.5 + z_d
     robot_joint1_pub.publish(joint1)

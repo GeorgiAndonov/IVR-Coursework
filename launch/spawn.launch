@@ -56,8 +56,8 @@
   <group ns="/target">
 	<param name="robot_description" command="$(find xacro)/xacro --inorder '$(find ivr_assignment)/urdf/object.urdf'"/>
 
-	<arg name="x" default="3"/>
-	<arg name="y" default="3"/>
+	<arg name="x" default="0"/>
+	<arg name="y" default="0"/>
 	<arg name="z" default="0"/>
 
 	<node name="my_robot_spawn2" pkg="gazebo_ros" type="spawn_model" output="screen"
