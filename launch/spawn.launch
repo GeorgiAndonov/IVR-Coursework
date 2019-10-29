@@ -84,6 +84,37 @@
          
   </group>
 
+<!--Spawn object 2-->
+  <group ns="/target2">
+	<param name="robot_description" command="$(find xacro)/xacro --inorder '$(find ivr_assignment)/urdf/object2.urdf'"/>
+
+	<arg name="x" default="0"/>
+	<arg name="y" default="0"/>
+	<arg name="z" default="0"/>
+
+	<node name="my_robot_spawn3" pkg="gazebo_ros" type="spawn_model" output="screen"
+	args="-urdf -param robot_description -model my_target2 -x $(arg x) -y $(arg y) -z $(arg z)" />
+
+<!-- Load joint controller configurations from YAML file to parameter server -->          
+        <rosparam command="load" file="$(find ivr_assignment)/config/joints3.yaml" />
+
+<!-- load the controllers -->
+	<node name="controller_spawner3" pkg="controller_manager" type="spawner"
+		respawn = "false" output ="screen" ns="/target2"
+		args="joint_state_controller
+		x2_position_controller	
+		y2_position_controller
+                z2_position_controller
+		--timeout 60">
+	</node>
+
+<!-- convert joint states to TF transforms for rviz, etc -->
+	<node name="robot_state_publisher3" pkg="robot_state_publisher" type="robot_state_publisher"
+	   respawn="false" output="screen">
+           <remap from="/joint_states" to="/target2/joint_states" />
+	</node>
+         
+  </group>
 
 <!--Spawn Camera-->
   <group ns="/camera1">
