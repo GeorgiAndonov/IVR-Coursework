@@ -68,7 +68,7 @@
   <link name="Box">
     <visual>
       <geometry>
-        <box size="0.6 0.1 0.2"/>
+        <box size="0.8 0.4 0.4"/>
       </geometry>
     <origin rpy="0 0 0"  xyz="0 0 0.3" />
     <material name="blue">
@@ -161,16 +161,9 @@
     </plugin>
   </gazebo>
 
-
-  <gazebo reference="Box">  
-    <visual>  
-      <material>  
-        <ambient>1 0.6 0 0.5</ambient>  
-        <diffuse>1 0.6 0 0.5</diffuse>  
-        <specular>1 0.6 0 0.5</specular>  
-        <emissive>0.0 0.0 0.0 0.0</emissive>  
-      </material>  
-    </visual>  
+ 
+   <gazebo reference="Box">
+    <material>Gazebo/Orange</material>
   </gazebo>
 
 </robot>

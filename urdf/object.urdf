@@ -162,15 +162,8 @@
   </gazebo>
 
 
-  <gazebo reference="sphere">  
-    <visual>  
-      <material>  
-        <ambient>1 0.6 0 0.5</ambient>  
-        <diffuse>1 0.6 0 0.5</diffuse>  
-        <specular>1 0.6 0 0.5</specular>  
-        <emissive>0.0 0.0 0.0 0.0</emissive>  
-      </material>  
-    </visual>  
+ <gazebo reference="sphere">
+    <material>Gazebo/Orange</material>
   </gazebo>
 
 </robot>
