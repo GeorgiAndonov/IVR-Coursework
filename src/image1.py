@@ -35,8 +35,26 @@ class image_converter:
       # Obtain the moments of the binary image
       M = cv2.moments(mask)
       # Calculate pixel coordinates for the centre of the blob
-      cx = int(M['m10'] / M['m00'])
-      cy = int(M['m01'] / M['m00'])
+      if(M['m00'] != 0):
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+      else:
+        #If the red circle is occluded, try the green circle
+        mask = cv2.inRange(image, (0, 100, 0), (0, 255, 0))
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.dilate(mask, kernel, iterations=3)
+        M = cv2.moments(mask)
+        if(M['m00'] != 0):
+          cx = int(M['m10'] / M['m00'])
+          cy = int(M['m01'] / M['m00'])
+        else:
+          #if the green circle is occluded, try the blue circle
+          mask = cv2.inRange(image, (100, 0, 0), (255, 0, 0))
+          kernel = np.ones((5, 5), np.uint8)
+          mask = cv2.dilate(mask, kernel, iterations=3)
+          M = cv2.moments(mask)
+          cx = int(M['m10'] / M['m00'])
+          cy = int(M['m01'] / M['m00'])
       return np.array([cx, cy])
  
 
@@ -46,8 +64,24 @@ class image_converter:
       kernel = np.ones((5, 5), np.uint8)
       mask = cv2.dilate(mask, kernel, iterations=3)
       M = cv2.moments(mask)
-      cx = int(M['m10'] / M['m00'])
-      cy = int(M['m01'] / M['m00'])
+      if(M['m00'] != 0):
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+      else:
+        mask = cv2.inRange(image, (0, 0, 100), (0, 0, 255))
+        kernel = np.ones((5, 5), np.uint8)
+        mask = cv2.dilate(mask, kernel, iterations=3)
+        M = cv2.moments(mask)
+        if(M['m00'] != 0):
+          cx = int(M['m10'] / M['m00'])
+          cy = int(M['m01'] / M['m00'])
+        else:
+          mask = cv2.inRange(image, (100, 0, 0), (255, 0, 0))
+          kernel = np.ones((5, 5), np.uint8)
+          mask = cv2.dilate(mask, kernel, iterations=3)
+          M = cv2.moments(mask)
+          cx = int(M['m10'] / M['m00'])
+          cy = int(M['m01'] / M['m00'])   
       return np.array([cx, cy])
 
 
@@ -121,31 +155,14 @@ class image_converter:
     except CvBridgeError as e:
       print(e)
 
-#def jointspins(joint2pub,joint3pub,joint4pub,zero_time):
-#  now = rospy.Time.now()
-#  timedur = (now - zero_time)
-#  time = timedur.to_sec()
-#  joint2pub.publish(np.pi/2 * np.sin(np.pi/15 * time))
-#  joint3pub.publish(np.pi/2 * np.sin(np.pi/18 * time))
-#  joint4pub.publish(np.pi/2 * np.sin(np.pi/20 * time))
-
 # call the class
 def main(args):
   ic = image_converter()
-  #rate = rospy.Rate(1)
-  #joint2pub = rospy.Publisher('/robot/joint2_position_controller/command', Float64, queue_size=10)
-  #joint3pub = rospy.Publisher('/robot/joint3_position_controller/command', Float64, queue_size=10)
-  #joint4pub = rospy.Publisher('/robot/joint4_position_controller/command', Float64, queue_size=10)
-  #zero_time = rospy.Time()
-  #while not rospy.is_shutdown():
-  #  jointspins(joint2pub,joint3pub,joint4pub,zero_time)
-  #  rate.sleep
-  #print("Shutting down")
+
   try:
     rospy.spin()
   except KeyboardInterrupt:
     print("Shutting down")
-  cv2.destroyAllWindows()
   cv2.destroyAllWindows()
 
 # run the code if the node is called
