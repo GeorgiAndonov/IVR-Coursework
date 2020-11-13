@@ -21,13 +21,24 @@ class image_converter:
     self.image_pub1 = rospy.Publisher("image_topic1",Image, queue_size = 1)
     # initialize a subscriber to recieve messages rom a topic named /robot/camera1/image_raw and use callback function to recieve data
     self.image_sub1 = rospy.Subscriber("/camera1/robot/image_raw",Image,self.callback1)
-    self.joints_pub = rospy.Publisher("camera2/robot/joints_pos",Float64MultiArray, queue_size=10)
+    self.joints_pub = rospy.Publisher("camera1/robot/joints_pos",Float64MultiArray, queue_size=10)
+    self.pos_pub = rospy.Publisher("camera1/robot/spheres_pos",Float64MultiArray, queue_size=10)
+    self.target_pub = rospy.Publisher("camera1/robot/target_pos",Float64MultiArray, queue_size=10)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
 
+  def detect_target(self,image):
+      hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+      mask = cv2.inRange(hsv, (25, 80, 30), (35, 100, 90))
+      gray = cv2.cvtColor(masj, cv2.COLOR_HSV2GRAY)
+      circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.2, 100)
+      if circles is not None:
+        return circles[0,0][0:2]
+      else:
+        raise ValueError
+
   # In this method you can focus on detecting the centre of the red circle
-  def detect_red(self,image):
-      # Isolate the blue colour in the image as a binary image
+  def detect_red(self,image):      # Isolate the blue colour in the image as a binary image
       mask = cv2.inRange(image, (0, 0, 100), (0, 0, 255))
       # This applies a dilate that makes the binary region larger (the more iterations the larger it becomes)
       kernel = np.ones((5, 5), np.uint8)
@@ -130,6 +141,15 @@ class image_converter:
     ja3 = np.arctan2(circle2Pos[0]-circle3Pos[0], circle2Pos[1]-circle3Pos[1]) - ja2 - ja1
     return np.array([ja1, ja2, ja3])
 
+  def detect_sphere_locations(self, image):
+    a = self.pixel2meter(image)
+    # Obtain the centre of each coloured blob 
+    center = a * self.detect_yellow(image)
+    circle1Pos = a * self.detect_blue(image) 
+    circle2Pos = a * self.detect_green(image) 
+    circle3Pos = a * self.detect_red(image)
+    return np.array([center, circle1Pos, circle2Pos, circle3Pos])
+
   # Recieve data from camera 1, process it, and publish
   def callback1(self,data):
     # Recieve the image
@@ -144,14 +164,22 @@ class image_converter:
 
     im1=cv2.imshow('window1', self.cv_image)
     a = self.detect_joint_angles(self.cv_image)
+    b = self.detect_sphere_locations(self.cv_image)
+    c = self.detect_target(self.cv_image)
     cv2.waitKey(1)
 
     self.joints = Float64MultiArray()
+    self.spheres = Float64MultiArray()
+    self.target = Float64MultiArray()
     self.joints.data = a
+    self.spheres.data = b
+    self.target.data = c
     # Publish the results
     try: 
       self.image_pub1.publish(self.bridge.cv2_to_imgmsg(self.cv_image, "bgr8"))
       self.joints_pub.publish(self.joints)
+      self.pos_pub.publish(self.spheres)
+      self.target_pub.publish(self.target)
     except CvBridgeError as e:
       print(e)
 
