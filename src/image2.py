@@ -21,21 +21,21 @@ class image_converter:
     self.image_pub2 = rospy.Publisher("image_topic2",Image, queue_size = 1)
     # initialize a subscriber to recieve messages rom a topic named /robot/camera1/image_raw and use callback function to recieve data
     self.image_sub2 = rospy.Subscriber("/camera2/robot/image_raw",Image,callback=self.callback2)
-    self.joints_pub = rospy.Publisher("camera2/robot/joints_pos",Float64MultiArray, queue_size=10)
-    self.pos_pub = rospy.Publisher("camera2/robot/spheres_pos",Float64MultiArray, queue_size=10)
-    self.target_pub = rospy.Publisher("camera2/robot/target_pos",Float64MultiArray, queue_size=10)
+    self.joints_pub = rospy.Publisher("camera2/robot/joints_pos",Float64MultiArray, queue_size=10, latch=True)
+    self.pos_pub = rospy.Publisher("camera2/robot/spheres_pos",Float64MultiArray, queue_size=10, latch=True)
+    self.target_pub = rospy.Publisher("camera2/robot/target_pos",Float64MultiArray, queue_size=10, latch=True)
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
 
   def detect_target(self,image):
-      hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+      hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
       mask = cv2.inRange(hsv, (25, 80, 30), (35, 100, 90))
-      gray = cv2.cvtColor(masj, cv2.COLOR_HSV2GRAY)
-      circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, 1.2, 100)
+      #gray = cv2.cvtColor(mask, cv2.COLOR_HSV2GRAY)
+      circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, 1.2, 100)
       if circles is not None:
         return circles[0,0][0:2]
-      else:
-        raise ValueError
+      #else:
+      #  raise ValueError
 
   # In this method you can focus on detecting the centre of the red circle
   def detect_red(self,image):
