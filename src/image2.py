@@ -21,7 +21,7 @@ class image_converter:
     self.image_pub2 = rospy.Publisher("image_topic2",Image, queue_size = 1)
     # initialize a subscriber to recieve messages rom a topic named /robot/camera1/image_raw and use callback function to recieve data
     self.image_sub2 = rospy.Subscriber("/camera2/robot/image_raw",Image,callback=self.callback2)
-    self.joints_pub = rospy.Publisher("camera2/robot/joints_pos",Float64MultiArray, queue_size=10, latch=True)
+    #self.joints_pub = rospy.Publisher("camera2/robot/joints_pos",Float64MultiArray, queue_size=10, latch=True)
     self.pos_pub = rospy.Publisher("camera2/robot/spheres_pos",Float64MultiArray, queue_size=10, latch=True)
     self.target_pub = rospy.Publisher("camera2/robot/target_pos",Float64MultiArray, queue_size=10, latch=True)
     # initialize the bridge between openCV and ROS
@@ -30,47 +30,32 @@ class image_converter:
   def detect_target(self,image):
       hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
       mask = cv2.inRange(hsv, (25, 80, 30), (35, 100, 90))
-      #gray = cv2.cvtColor(mask, cv2.COLOR_HSV2GRAY)
-      circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, 1.2, 100)
-      if circles is not None:
-        return circles[0,0][0:2]
+      return self.detect_chamfer(mask)
+      #bgr = cv2.cvtColor(mask, cv2.COLOR_HSV2BGR)
+      #gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+      #circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, 1.2, 100)
+      #if circles is not None:
+        #return circles[0,0][0:2]
       #else:
       #  raise ValueError
 
-  # In this method you can focus on detecting the centre of the red circle
+  def detect_chamfer(self,image):
+      return np.array([0,0])
+
   def detect_red(self,image):
-      # Isolate the blue colour in the image as a binary image
       mask = cv2.inRange(image, (0, 0, 100), (0, 0, 255))
-      # This applies a dilate that makes the binary region larger (the more iterations the larger it becomes)
       kernel = np.ones((5, 5), np.uint8)
       mask = cv2.dilate(mask, kernel, iterations=3)
-      # Obtain the moments of the binary image
       M = cv2.moments(mask)
-      # Calculate pixel coordinates for the centre of the blob
       if(M['m00'] != 0):
         cx = int(M['m10'] / M['m00'])
         cy = int(M['m01'] / M['m00'])
       else:
-        #If the red circle is occluded, try the green circle
-        mask = cv2.inRange(image, (0, 100, 0), (0, 255, 0))
-        kernel = np.ones((5, 5), np.uint8)
-        mask = cv2.dilate(mask, kernel, iterations=3)
-        M = cv2.moments(mask)
-        if(M['m00'] != 0):
-          cx = int(M['m10'] / M['m00'])
-          cy = int(M['m01'] / M['m00'])
-        else:
-          #if the green circle is occluded, try the blue circle
-          mask = cv2.inRange(image, (100, 0, 0), (255, 0, 0))
-          kernel = np.ones((5, 5), np.uint8)
-          mask = cv2.dilate(mask, kernel, iterations=3)
-          M = cv2.moments(mask)
-          cx = int(M['m10'] / M['m00'])
-          cy = int(M['m01'] / M['m00'])
+        cx = 0
+        cy = 0
       return np.array([cx, cy])
  
 
-  # Detecting the centre of the green circle
   def detect_green(self,image):
       mask = cv2.inRange(image, (0, 100, 0), (0, 255, 0))
       kernel = np.ones((5, 5), np.uint8)
@@ -80,41 +65,35 @@ class image_converter:
         cx = int(M['m10'] / M['m00'])
         cy = int(M['m01'] / M['m00'])
       else:
-        mask = cv2.inRange(image, (0, 0, 100), (0, 0, 255))
-        kernel = np.ones((5, 5), np.uint8)
-        mask = cv2.dilate(mask, kernel, iterations=3)
-        M = cv2.moments(mask)
-        if(M['m00'] != 0):
-          cx = int(M['m10'] / M['m00'])
-          cy = int(M['m01'] / M['m00'])
-        else:
-          mask = cv2.inRange(image, (100, 0, 0), (255, 0, 0))
-          kernel = np.ones((5, 5), np.uint8)
-          mask = cv2.dilate(mask, kernel, iterations=3)
-          M = cv2.moments(mask)
-          cx = int(M['m10'] / M['m00'])
-          cy = int(M['m01'] / M['m00'])   
+        cx = 0
+        cy = 0 
       return np.array([cx, cy])
 
 
-  # Detecting the centre of the blue circle
   def detect_blue(self,image):
       mask = cv2.inRange(image, (100, 0, 0), (255, 0, 0))
       kernel = np.ones((5, 5), np.uint8)
       mask = cv2.dilate(mask, kernel, iterations=3)
       M = cv2.moments(mask)
-      cx = int(M['m10'] / M['m00'])
-      cy = int(M['m01'] / M['m00'])
+      if(M['m00'] != 0):
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+      else:
+        cx = 0
+        cy = 0 
       return np.array([cx, cy])
 
-  # Detecting the centre of the yellow circle
   def detect_yellow(self,image):
       mask = cv2.inRange(image, (0, 100, 100), (0, 255, 255))
       kernel = np.ones((5, 5), np.uint8)
       mask = cv2.dilate(mask, kernel, iterations=3)
       M = cv2.moments(mask)
-      cx = int(M['m10'] / M['m00'])
-      cy = int(M['m01'] / M['m00'])
+      if(M['m00'] != 0):
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+      else:
+        cx = 0
+        cy = 0 
       return np.array([cx, cy])
 
 
@@ -160,27 +139,28 @@ class image_converter:
       print(e)
     # Uncomment if you want to save the image
     #cv2.imwrite('image_copy.png', cv_image)
-    im2=cv2.imshow('window2', self.cv_image)
-    a = self.detect_joint_angles(self.cv_image)
+    #im2=cv2.imshow('window2', self.cv_image)
+    #a = self.detect_joint_angles(self.cv_image)
     b = self.detect_sphere_locations(self.cv_image)
     c = self.detect_target(self.cv_image)
     cv2.waitKey(1)
 
-    self.joints = Float64MultiArray()
+    #self.joints = Float64MultiArray()
     self.spheres = Float64MultiArray()
     self.target = Float64MultiArray()
-    self.joints.data = a
-    self.spheres.data = b
+    #self.joints.data = a
+    self.spheres.data = np.reshape(b,(8))
     self.target.data = c
 
     # Publish the results
     try: 
       self.image_pub2.publish(self.bridge.cv2_to_imgmsg(self.cv_image, "bgr8"))
-      self.joints_pub.publish(self.joints)
+      #self.joints_pub.publish(self.joints)
       self.pos_pub.publish(self.spheres)
       self.target_pub.publish(self.target)
     except CvBridgeError as e:
       print(e)
+    rospy.sleep(1)
 
 # call the class
 def main(args):
