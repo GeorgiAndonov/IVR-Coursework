@@ -26,7 +26,13 @@ class joint_angles:
         self.angleactual2 = rospy.Subscriber('/robot/joint3_position_controller/command', Float64, self.callback4)
         self.angleactual3 = rospy.Subscriber('/robot/joint4_position_controller/command', Float64, self.callback5)
         #self.joint2 = rospy.Subscriber("robot/joint2_position_controller/command",Float64MultiArray, self.callback2)
-        
+        self.time_trajectory = rospy.get_time()
+        # initialize errors
+        self.time_previous_step = np.array([rospy.get_time()], dtype='float64')
+        # initialize error and derivative of error for trajectory tracking
+        self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
+        self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
+
     def callback1(self, data):
         self.spheres1= np.reshape(data.data, (4,2))
 
@@ -75,20 +81,96 @@ class joint_angles:
         l4 = self.find_angle(points[3], points[2], 'x').item()
         return np.array([l1,l2,l3,l4])
 
-        '''
-        l2 = angles1[1]
-        l3 = -1 *(angles2[1])
-        r=3.5
-        l23vector = np.array([r*np.cos(l2)*np.cos(l3), r*np.sin(l3), r*np.sin(l2)*np.cos(l3)])
-        alpha = angles1[2]
-        beta = (-1 * angles2[2])
-        l34vector = np.array([r*np.cos(alpha)*np.cos(beta), r*np.sin(beta), r*np.sin(alpha)*np.cos(beta)])
-        cross = np.cross(l23vector,l34vector)
-        v_norm = np.array([1,0,0])
-        v_norm=v_norm/np.linalg.norm(v_norm)
-        l4 = np.arctan2(np.dot(cross, v_norm),(np.dot(l23vector, l34vector)))
-        return np.array([l2,l3,l4])
-        '''
+    def target_coordinates(self):
+        return 1
+
+    # Robot Control - move to jointcalc
+    def forward_kinematics(self):
+        angles = self.jointcalc()
+        cos_angle1, sin_angle1 = np.cos(angles[0] + 90), np.sin(angles[0] + 90)
+        cos_angle2, sin_angle2 = np.cos(angles[1] + 90), np.sin(angles[1] + 90)
+        cos_angle3, sin_angle3 = np.cos(angles[2]), np.sin(angles[2])
+        cos_angle4, sin_angle4 = np.cos(angles[3]), np.sin(angles[3])
+
+        x_e = 3.5 * cos_angle3 * cos_angle1 * cos_angle2 - 3 * sin_angle4 * cos_angle1 * sin_angle2 + \
+              3 * cos_angle4 * (cos_angle3 * cos_angle1 * cos_angle2 + sin_angle3 * sin_angle1) + \
+              3.5 * sin_angle3 * sin_angle1
+
+        y_e = 3.5 * cos_angle3 * sin_angle1 * cos_angle2 - 3 * sin_angle4 * sin_angle1 * sin_angle2 + \
+              3 * cos_angle4 * (cos_angle3 * sin_angle1 * cos_angle2 - sin_angle3 * cos_angle1) - \
+              3.5 * sin_angle3 * cos_angle1
+
+        z_e = 3 * cos_angle3 * cos_angle4 * sin_angle2 + 3.5 * cos_angle3 * sin_angle2 + 3 * sin_angle4 * cos_angle2 + 2.5
+
+        end_effector = np.array([x_e, y_e, z_e])
+        return end_effector
+
+    # Calculate the robot Jacobian
+    def calculate_jacobian(self):
+        angles = self.jointcalc()
+        cos_angle1, sin_angle1 = np.cos(angles[0] + 90), np.sin(angles[0] + 90)
+        cos_angle2, sin_angle2 = np.cos(angles[1] + 90), np.sin(angles[1] + 90)
+        cos_angle3, sin_angle3 = np.cos(angles[2]), np.sin(angles[2])
+        cos_angle4, sin_angle4 = np.cos(angles[3]), np.sin(angles[3])
+
+        dk_1 = [
+            -3.5 * cos_angle3 * sin_angle1 * cos_angle2 + 3 * sin_angle4 * sin_angle1 * sin_angle2 + 3 * cos_angle4 *
+            (-cos_angle3 * cos_angle2 * sin_angle1 + sin_angle3 * cos_angle1) + 3.5 * sin_angle3 * cos_angle1,
+            -3.5 * cos_angle3 * cos_angle1 * sin_angle2 - 3 * sin_angle4 * cos_angle1 * cos_angle2 - 3 * cos_angle4 *
+            cos_angle3 * cos_angle1 * sin_angle2,
+            -3.5 * sin_angle3 * cos_angle1 * cos_angle2 + 3 * cos_angle4(-sin_angle3 * cos_angle1 * cos_angle2 +
+                                                                         cos_angle3 * sin_angle1) + 3.5 * cos_angle3 * sin_angle1,
+            -3 * cos_angle4 * cos_angle1 * sin_angle2 - 3 * sin_angle4 * (
+                    cos_angle3 * cos_angle1 * cos_angle2 + sin_angle3 * sin_angle1)]
+
+        dk_2 = [3.5 * cos_angle3 * cos_angle1 * cos_angle2 - 3 * sin_angle4 * cos_angle1 * sin_angle2 + 3 * cos_angle4 *
+                (cos_angle3 * cos_angle2 * cos_angle1 + sin_angle3 * sin_angle1) + 3.5 * sin_angle3 * sin_angle1,
+                -3.5 * cos_angle3 * sin_angle1 * sin_angle2 - 3 * sin_angle4 * sin_angle1 * cos_angle2 - 3 * cos_angle4 *
+                cos_angle3 * sin_angle1 * sin_angle2,
+                -3.5 * sin_angle3 * sin_angle1 * cos_angle2 + 3 * cos_angle4(-sin_angle3 * sin_angle1 * cos_angle2 -
+                                                                             cos_angle3 * cos_angle1) - 3.5 * cos_angle3 * cos_angle1,
+                -3 * cos_angle4 * sin_angle1 * sin_angle2 - 3 * sin_angle4 * (
+                        cos_angle3 * sin_angle1 * cos_angle2 - sin_angle3 * cos_angle1)]
+
+        dk_3 = [0,
+                3 * cos_angle3 * cos_angle4 * cos_angle2 + 3.5 * cos_angle3 * cos_angle2 - 3 * sin_angle4 * sin_angle2,
+                -3 * sin_angle3 * cos_angle4 * sin_angle2 - 3.5 * sin_angle3 * sin_angle2,
+                -3 * cos_angle3 * sin_angle4 * sin_angle2 + 3 * cos_angle4 * cos_angle2]
+
+        return np.array([dk_1,
+                         dk_2,
+                         dk_3])
+
+    def closed_loop_control(self):
+        k_p = np.array([[0, 0, 0],
+                        [0, 0, 0],
+                        [0, 0, 0]])
+
+        k_d = np.array([[0, 0, 0],
+                        [0, 0, 0],
+                        [0, 0, 0]])
+
+        # estimate time step
+        cur_time = np.array([rospy.get_time()])
+        dt = cur_time - self.time_previous_step
+        self.time_previous_step = cur_time
+
+        circle_pos = self.points3d()
+
+        # get the end-effector position
+        pos = circle_pos[3]  # Detect end-effector there
+        # desired trajectory
+        pos_d = self.target_coordinates()  # Detect sphere coordinates
+        # estimate derivative of error
+        self.error_d = ((pos_d - pos) - self.error) / dt
+        # estimate error
+        self.error = pos_d - pos
+        q = self.jointcalc() # Get the joint angles - jointcalc()
+        J_inv = np.linalg.pinv(self.calculate_jacobian(q))  # calculating the psudeo inverse of Jacobian
+        dq_d = np.dot(J_inv, (np.dot(k_d, self.error_d.transpose()) + np.dot(k_p, self.error.transpose())))
+        q_d = q + (dt * dq_d)  # control input (angular position of joints)
+        return q_d
+
 
 def main(args):
     rospy.init_node('joint_calculation', anonymous=True)
