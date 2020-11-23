@@ -34,10 +34,10 @@ class joint_angles:
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
 
     def callback1(self, data):
-        self.spheres1= np.reshape(data.data, (4,2))
+        self.spheres1= data.data
 
     def callback2(self, data):
-        self.spheres2= np.reshape(data.data, (4,2))
+        self.spheres2= data.data
 
     def callback3(self, data):
         self.jointsactual[0] = data.data
@@ -48,37 +48,46 @@ class joint_angles:
     def callback5(self, data):
         self.jointsactual[2] = data.data
 
-    def xrot_e(self, theta, a, b):
+    def translate(self, a,x,y,z):
+        a_1 = np.concatenate((a, [1]))
+        m = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[x,y,z,1]])
+        a_2 = m.dot(a_1)
+        return a_2[0:3]/a_2[3]
+
+    def xrot_e(self, theta, a, b, l):
+        a_2 = self.translate(a,0,0,l)
         m = np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
-        return np.sum(np.abs(m.dot(a)-b))
+        return np.sum(np.abs(m.dot(a_2)-b))
         
     def yrot_e(self, theta, a, b):
+        #m =
         m = np.array([[np.cos(theta),0,-np.sin(theta)],[0,1,0],[np.sin(theta),0,np.cos(theta)]])
         return np.sum(np.abs(m.dot(a)-b))
         
-    def find_angle(self, a, b, axis):
-        b = b-a
+    def find_angle(self, a, b, l, axis):
+        a = a-b
         a = a/np.linalg.norm(a)
         b = b/np.linalg.norm(b)
 
         if (axis == 'x'):
-            return least_squares(self.xrot_e, [0.0], args = (a,b), bounds = (-np.pi/2, np.pi/2)).x
+            return least_squares(self.xrot_e, [0.0], args = (a,b,l), bounds = (-np.pi/2, np.pi/2)).x
         elif (axis == 'y'):
             return least_squares(self.yrot_e, [0.0], args = (a,b), bounds = (-np.pi/2, np.pi/2)).x
 
     def points3d(self):
-        yellow = np.array([self.spheres2[0][0],self.spheres1[0][0],np.mean([self.spheres2[0][1],self.spheres1[0][1]])])
-        blue = np.array([self.spheres2[1][0],self.spheres1[1][0],np.mean([self.spheres2[1][1],self.spheres1[1][1]])])
-        green = np.array([self.spheres2[2][0],self.spheres1[2][0],np.mean([self.spheres2[2][1],self.spheres1[2][1]])])
-        red = np.array([self.spheres2[3][0],self.spheres1[3][0],np.mean([self.spheres2[3][1],self.spheres1[3][1]])])
-        return np.array([yellow,blue,green,red])
+        yellow = np.array([self.spheres2[0],self.spheres1[0],np.mean([self.spheres2[1],self.spheres1[1]])])
+        blue = np.array([self.spheres2[2],self.spheres1[2],np.mean([self.spheres2[3],self.spheres1[3]])])
+        green = np.array([self.spheres2[4],self.spheres1[4],np.mean([self.spheres2[5],self.spheres1[5]])])
+        red = np.array([self.spheres2[6],self.spheres1[6],np.mean([self.spheres2[7],self.spheres1[7]])])
+        return [yellow,blue,green,red]
     
     def jointcalc(self):
         points = self.points3d()
         l1 = 0
-        l2 = self.find_angle(points[2], points[1], 'x').item()
-        l3 = self.find_angle(points[2], points[1], 'y').item()
-        l4 = self.find_angle(points[3], points[2], 'x').item()
+        
+        l2 = self.find_angle(points[2], points[1], 3.5, 'x').item()
+        l3 = self.find_angle(points[2], points[1], 0, 'y').item()
+        l4 = self.find_angle(points[3], points[2], 3, 'x').item()
         return np.array([l1,l2,l3,l4])
 
     def target_coordinates(self):
@@ -180,7 +189,7 @@ def main(args):
     while ((len(jang.spheres1)==0) or (len(jang.spheres2)==0)):
         rate.sleep()
     while not (rospy.is_shutdown() or (i>=50)):
-        print(jang.jointsactual - jang.jointcalc()[1:4])
+        print(jang.spheres1)#jang.jointcalc()[1:4])
         rate.sleep()
         i+=1
     print("Shutting down")

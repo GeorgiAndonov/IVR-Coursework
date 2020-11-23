@@ -94,33 +94,18 @@ class image_converter:
         cy = int(M['m01'] / M['m00'])
       else:
         cx = 0
-        cy = 0 
+        cy = 0
       return np.array([cx, cy])
 
 
   # Calculate the conversion from pixel to meter
   def pixel2meter(self,image):
       # Obtain the centre of each coloured blob
-      circle1Pos = self.detect_blue(image)
-      circle2Pos = self.detect_green(image)
+      circle1Pos = self.detect_yellow(image)
+      circle2Pos = self.detect_blue(image)
       # find the distance between two circles
       dist = np.sum((circle1Pos - circle2Pos)**2)
-      return 3 / np.sqrt(dist)
-
-
-  # Calculate the relevant joint angles from the image
-  def detect_joint_angles(self,image):
-    a = self.pixel2meter(image)
-    # Obtain the centre of each coloured blob 
-    center = a * self.detect_yellow(image)
-    circle1Pos = a * self.detect_blue(image) 
-    circle2Pos = a * self.detect_green(image) 
-    circle3Pos = a * self.detect_red(image)
-    # Solve using trigonometry
-    ja1 = np.arctan2(center[0]- circle1Pos[0], center[1] - circle1Pos[1])
-    ja2 = np.arctan2(circle1Pos[0]-circle2Pos[0], circle1Pos[1]-circle2Pos[1]) - ja1
-    ja3 = np.arctan2(circle2Pos[0]-circle3Pos[0], circle2Pos[1]-circle3Pos[1]) - ja2 - ja1
-    return np.array([ja1, ja2, ja3])
+      return 2.5 / np.sqrt(dist)
 
   def detect_sphere_locations(self, image):
     a = self.pixel2meter(image)

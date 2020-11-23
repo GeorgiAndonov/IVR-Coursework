@@ -99,21 +99,10 @@ class image_converter:
 
 
   def pixel2meter(self,image):
-      circle1Pos = self.detect_blue(image)
-      circle2Pos = self.detect_green(image)
+      circle1Pos = self.detect_yellow(image)
+      circle2Pos = self.detect_blue(image)
       dist = np.sum((circle1Pos - circle2Pos)**2)
-      return 3 / np.sqrt(dist)
-
-  def detect_joint_angles(self,image):
-    a = self.pixel2meter(image)
-    center = a * self.detect_yellow(image)
-    circle1Pos = a * self.detect_blue(image) 
-    circle2Pos = a * self.detect_green(image) 
-    circle3Pos = a * self.detect_red(image)
-    ja1 = np.arctan2(center[0]- circle1Pos[0], center[1] - circle1Pos[1])
-    ja2 = np.arctan2(circle1Pos[0]-circle2Pos[0], circle1Pos[1]-circle2Pos[1]) - ja1
-    ja3 = np.arctan2(circle2Pos[0]-circle3Pos[0], circle2Pos[1]-circle3Pos[1]) - ja2 - ja1
-    return np.array([ja1, ja2, ja3])
+      return 2.5 / np.sqrt(dist)
 
   def detect_sphere_locations(self, image):
     a = self.pixel2meter(image)
