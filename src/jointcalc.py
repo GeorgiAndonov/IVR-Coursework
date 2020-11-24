@@ -17,8 +17,8 @@ class joint_angles:
     def __init__(self):
         self.spheres1=np.zeros((4,3))
         self.spheres2=np.zeros((4,3))
-        self.jointsactual = np.array([0.0,0.0,0.0])
-        self.jointsest = np.array([0.0,0.0,0.0])
+        self.jointsactual = np.array([0.0,0.0,0.0,0.0])
+        self.jointsest = np.array([0.0,0.0,0.0,0.0])
         #self.jointsactual=np.array([])
         self.pos1 = rospy.Subscriber("camera1/robot/spheres_pos",Float64MultiArray, self.callback1)
         self.pos2 = rospy.Subscriber("camera2/robot/spheres_pos",Float64MultiArray, self.callback2)
@@ -32,21 +32,23 @@ class joint_angles:
         # initialize error and derivative of error for trajectory tracking
         self.error = np.array([0.0, 0.0, 0.0], dtype='float64')
         self.error_d = np.array([0.0, 0.0, 0.0], dtype='float64')
+        #while not (rospy.is_shutdown():
+                   
 
     def callback1(self, data):
-        self.spheres1= data.data
+        self.spheres1= np.reshape(data.data, (4,2))
 
     def callback2(self, data):
-        self.spheres2= data.data
+        self.spheres2= np.reshape(data.data, (4,2))
 
     def callback3(self, data):
-        self.jointsactual[0] = data.data
-        
-    def callback4(self, data):
         self.jointsactual[1] = data.data
         
-    def callback5(self, data):
+    def callback4(self, data):
         self.jointsactual[2] = data.data
+        
+    def callback5(self, data):
+        self.jointsactual[3] = data.data
 
     def translate(self, a,x,y,z):
         a_1 = np.concatenate((a, [1]))
@@ -55,9 +57,9 @@ class joint_angles:
         return a_2[0:3]/a_2[3]
 
     def xrot_e(self, theta, a, b, l):
-        a_2 = self.translate(a,0,0,l)
+        #a_2 = self.translate(a,0,0,l)
         m = np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
-        return np.sum(np.abs(m.dot(a_2)-b))
+        return np.sum(np.abs(m.dot(a)-b))
         
     def yrot_e(self, theta, a, b):
         #m =
@@ -75,11 +77,12 @@ class joint_angles:
             return least_squares(self.yrot_e, [0.0], args = (a,b), bounds = (-np.pi/2, np.pi/2)).x
 
     def points3d(self):
-        yellow = np.array([self.spheres2[0],self.spheres1[0],np.mean([self.spheres2[1],self.spheres1[1]])])
-        blue = np.array([self.spheres2[2],self.spheres1[2],np.mean([self.spheres2[3],self.spheres1[3]])])
-        green = np.array([self.spheres2[4],self.spheres1[4],np.mean([self.spheres2[5],self.spheres1[5]])])
-        red = np.array([self.spheres2[6],self.spheres1[6],np.mean([self.spheres2[7],self.spheres1[7]])])
-        return [yellow,blue,green,red]
+        yellow = np.array([self.spheres2[0][0],self.spheres1[0][0],np.mean([self.spheres2[0][1],self.spheres1[0][1]])])
+        blue = np.array([self.spheres2[1][0],self.spheres1[1][0],np.mean([self.spheres2[1][1],self.spheres1[1][1]])])
+        green = np.array([self.spheres2[2][0],self.spheres1[2][0],np.mean([self.spheres2[2][1],self.spheres1[2][1]])])
+        red = np.array([self.spheres2[3][0],self.spheres1[3][0],np.mean([self.spheres2[3][1],self.spheres1[3][1]])])
+        #return np.array([yellow,blue,green,red])
+        return np.array([yellow-yellow,yellow-blue,yellow-green,yellow-red])
     
     def jointcalc(self):
         points = self.points3d()
@@ -186,13 +189,17 @@ def main(args):
     rate = rospy.Rate(1)
     jang = joint_angles()
     i = 0
+    angles = []
     while ((len(jang.spheres1)==0) or (len(jang.spheres2)==0)):
         rate.sleep()
     while not (rospy.is_shutdown() or (i>=50)):
-        print(jang.spheres1)#jang.jointcalc()[1:4])
+        angles.append([jang.jointsactual[1], jang.jointcalc()[1]])
         rate.sleep()
         i+=1
-    print("Shutting down")
+    plt.plot(angles)
+    plt.show()
+    rospy.spin()
+    #print("Shutting down")
 
 # run the code if the node is called
 if __name__ == '__main__':
