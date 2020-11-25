@@ -100,6 +100,7 @@ class joint_angles:
     # Robot Control - move to jointcalc
     def forward_kinematics(self):
         angles = self.jointcalc()
+        print(angles)
         cos_angle1, sin_angle1 = np.cos(angles[0] + 90), np.sin(angles[0] + 90)
         cos_angle2, sin_angle2 = np.cos(angles[1] + 90), np.sin(angles[1] + 90)
         cos_angle3, sin_angle3 = np.cos(angles[2]), np.sin(angles[2])
