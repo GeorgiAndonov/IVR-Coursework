@@ -24,9 +24,12 @@ class joint_angles:
         #self.jointsactual=np.array([])
         self.pos1 = rospy.Subscriber("camera1/robot/spheres_pos",Float64MultiArray, self.callback1)
         self.pos2 = rospy.Subscriber("camera2/robot/spheres_pos",Float64MultiArray, self.callback2)
-        self.anglesactual = rospy.Subscriber('/robot/joint_states', JointState, self.callback3)
-        self.targetpos1 = rospy.Subscriber("camera1/robot/target_pos",Float64MultiArray, self.callback4)
-        self.targetpos2 = rospy.Subscriber("camera2/robot/target_pos",Float64MultiArray, self.callback5)
+        self.angleactual0 = rospy.Subscriber('/robot/joint1_position_controller/command', Float64, self.callback3)
+        self.angleactual1 = rospy.Subscriber('/robot/joint2_position_controller/command', Float64, self.callback4)
+        self.angleactual2 = rospy.Subscriber('/robot/joint3_position_controller/command', Float64, self.callback5)
+        self.angleactual3 = rospy.Subscriber('/robot/joint4_position_controller/command', Float64, self.callback6)
+        self.targetpos1 = rospy.Subscriber("camera1/robot/target_pos",Float64MultiArray, self.callback7)
+        self.targetpos2 = rospy.Subscriber("camera2/robot/target_pos",Float64MultiArray, self.callback8)
         #self.joint2 = rospy.Subscriber("robot/joint2_position_controller/command",Float64MultiArray, self.callback2)
         self.time_trajectory = rospy.get_time()
         # initialize errors
@@ -44,12 +47,21 @@ class joint_angles:
         self.spheres2= np.reshape(data.data, (4,2))
 
     def callback3(self, data):
-        self.jointsactual = data.position
-
+        self.jointsactual[0] = data.data
+        
     def callback4(self, data):
-        self.target1= data.data
+        self.jointsactual[1] = data.data
 
     def callback5(self, data):
+        self.jointsactual[2] = data.data
+
+    def callback6(self, data):
+        self.jointsactual[3] = data.data
+
+    def callback7(self, data):
+        self.target1= data.data
+
+    def callback8(self, data):
         self.target2= data.data
 
     def translate(self, a,x,y,z):
@@ -112,10 +124,9 @@ class joint_angles:
 
     # Robot Control - move to jointcalc
     def forward_kinematics(self):
-        angles = self.jointcalc()
-        print(angles)
-        cos_angle1, sin_angle1 = np.cos(angles[0] + 90), np.sin(angles[0] + 90)
-        cos_angle2, sin_angle2 = np.cos(angles[1] + 90), np.sin(angles[1] + 90)
+        angles = self.jointsactual
+        cos_angle1, sin_angle1 = np.cos(angles[0] + np.pi/2), np.sin(angles[0] + np.pi/2)
+        cos_angle2, sin_angle2 = np.cos(angles[1] + np.pi/2), np.sin(angles[1] + np.pi/2)
         cos_angle3, sin_angle3 = np.cos(angles[2]), np.sin(angles[2])
         cos_angle4, sin_angle4 = np.cos(angles[3]), np.sin(angles[3])
 
@@ -134,9 +145,9 @@ class joint_angles:
 
     # Calculate the robot Jacobian
     def calculate_jacobian(self):
-        angles = self.jointcalc()
-        cos_angle1, sin_angle1 = np.cos(angles[0] + 90), np.sin(angles[0] + 90)
-        cos_angle2, sin_angle2 = np.cos(angles[1] + 90), np.sin(angles[1] + 90)
+        angles = self.jointsactual
+        cos_angle1, sin_angle1 = np.cos(angles[0] + np.pi/2), np.sin(angles[0] + np.pi/2)
+        cos_angle2, sin_angle2 = np.cos(angles[1] + np.pi/2), np.sin(angles[1] + np.pi/2)
         cos_angle3, sin_angle3 = np.cos(angles[2]), np.sin(angles[2])
         cos_angle4, sin_angle4 = np.cos(angles[3]), np.sin(angles[3])
 
