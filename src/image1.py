@@ -28,19 +28,14 @@ class image_converter:
     self.bridge = CvBridge()
 
   def detect_target(self,image):
-      hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-      mask = cv2.inRange(hsv, (25, 80, 30), (35, 100, 90))
+      mask = cv2.inRange(image, (0, 40, 100), (100, 100, 255))
       return self.detect_chamfer(mask)
-      #bgr = cv2.cvtColor(mask, cv2.COLOR_HSV2BGR)
-      #gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-      #circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, 1.2, 100)
-      #if circles is not None:
-        #return circles[0,0][0:2]
-      #else:
-      #  raise ValueError
 
   def detect_chamfer(self,image):
-      return np.array([0,0])
+      chamfer = cv2.imread('chamfer.png')
+      chamfer = cv2.cvtColor(chamfer, cv2.COLOR_BGR2GRAY)
+      match = cv2.matchTemplate(mask, chamfer, 1)
+      return np.array(cv2.minMaxLoc(match)[2])
     
 
   def detect_red(self,image):
