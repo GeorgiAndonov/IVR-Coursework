@@ -80,7 +80,10 @@ class joint_angles:
         green = np.array([self.spheres2[2][0],self.spheres1[2][0],np.mean([self.spheres2[2][1],self.spheres1[2][1]])])
         red = np.array([self.spheres2[3][0],self.spheres1[3][0],np.mean([self.spheres2[3][1],self.spheres1[3][1]])])
         #return np.array([yellow,blue,green,red])
-        return np.array([yellow-yellow,yellow-blue,yellow-green,yellow-red])
+
+        # For the blue joint the only possible coordinates are [0, 0, 2]
+        print(np.array([yellow-yellow, np.array([0, 0, 2]), green, red]))
+        return np.array([yellow-yellow, np.array([0, 0, 2]), green, red])
     
     def jointcalc(self):
         points = self.points3d()

@@ -116,6 +116,30 @@ class image_converter:
     circle3Pos = a * self.detect_red(image)
     return np.array([center, circle1Pos, circle2Pos, circle3Pos])
 
+  def detect_joints(self, image):
+    a = self.pixel2meter(image)
+    center = a * self.detect_yellow(image)
+
+    blue_pos = a * self.detect_blue(image)
+    blue_to_yellow = center - blue_pos
+    # This multiplication is as a result of the change in frames
+    blue_to_yellow = blue_to_yellow * np.array([-1, 1])
+
+    green_pos = a * self.detect_green(image)
+    green_to_yellow = center - green_pos
+    green_to_yellow = green_to_yellow * np.array([-1, 1])
+
+    red_pos = a * self.detect_red(image)
+    red_to_yellow = center - red_pos
+    red_to_yellow = red_to_yellow * np.array([-1, 1])
+
+    return np.array([center, blue_to_yellow, green_to_yellow, red_to_yellow])
+
+  def detect_end_effector(self, image):
+    a = self.pixel2meter(image)
+    end_effector = a * (self.detect_yellow(image) - self.detect_red(image))
+    return end_effector
+
   # Recieve data, process it, and publish
   def callback2(self,data):
     # Recieve the image
@@ -127,7 +151,9 @@ class image_converter:
     #cv2.imwrite('image_copy.png', cv_image)
     #im2=cv2.imshow('window2', self.cv_image)
     #a = self.detect_joint_angles(self.cv_image)
-    b = self.detect_sphere_locations(self.cv_image)
+    #b = self.detect_sphere_locations(self.cv_image)
+    b = self.detect_joints(self.cv_image)
+    print(b[3])
     c = self.detect_target(self.cv_image)
     cv2.waitKey(1)
 
