@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from std_msgs.msg import String
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, JointState
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 from scipy.optimize import least_squares
@@ -22,9 +22,7 @@ class joint_angles:
         #self.jointsactual=np.array([])
         self.pos1 = rospy.Subscriber("camera1/robot/spheres_pos",Float64MultiArray, self.callback1)
         self.pos2 = rospy.Subscriber("camera2/robot/spheres_pos",Float64MultiArray, self.callback2)
-        self.angleactual1 = rospy.Subscriber('/robot/joint2_position_controller/command', Float64, self.callback3)
-        self.angleactual2 = rospy.Subscriber('/robot/joint3_position_controller/command', Float64, self.callback4)
-        self.angleactual3 = rospy.Subscriber('/robot/joint4_position_controller/command', Float64, self.callback5)
+        self.anglesactual = rospy.Subscriber('/robot/joint_states', JointState, self.callback3)
         #self.joint2 = rospy.Subscriber("robot/joint2_position_controller/command",Float64MultiArray, self.callback2)
         self.time_trajectory = rospy.get_time()
         # initialize errors
@@ -42,13 +40,7 @@ class joint_angles:
         self.spheres2= np.reshape(data.data, (4,2))
 
     def callback3(self, data):
-        self.jointsactual[1] = data.data
-        
-    def callback4(self, data):
-        self.jointsactual[2] = data.data
-        
-    def callback5(self, data):
-        self.jointsactual[3] = data.data
+        self.jointsactual = data.position
 
     def translate(self, a,x,y,z):
         a_1 = np.concatenate((a, [1]))
@@ -72,9 +64,15 @@ class joint_angles:
         b = b/np.linalg.norm(b)
 
         if (axis == 'x'):
-            return least_squares(self.xrot_e, [0.0], args = (a,b,l), bounds = (-np.pi/2, np.pi/2)).x
+            try:
+                return least_squares(self.xrot_e, [0.0], args = (a,b,l), bounds = (-np.pi/2, np.pi/2)).x
+            except:
+                return np.array([0.0])
         elif (axis == 'y'):
-            return least_squares(self.yrot_e, [0.0], args = (a,b), bounds = (-np.pi/2, np.pi/2)).x
+            try:
+                return least_squares(self.yrot_e, [0.0], args = (a,b), bounds = (-np.pi/2, np.pi/2)).x
+            except:
+                return np.array([0.0])
 
     def points3d(self):
         yellow = np.array([self.spheres2[0][0],self.spheres1[0][0],np.mean([self.spheres2[0][1],self.spheres1[0][1]])])
@@ -193,13 +191,13 @@ def main(args):
     while ((len(jang.spheres1)==0) or (len(jang.spheres2)==0)):
         rate.sleep()
     while not (rospy.is_shutdown() or (i>=50)):
-        angles.append([jang.jointsactual[1], jang.jointcalc()[1]])
+        angles.append([jang.jointsactual[2], jang.jointcalc()[2]])
         rate.sleep()
         i+=1
     plt.plot(angles)
     plt.show()
     rospy.spin()
-    #print("Shutting down")
+    print("Shutting down")
 
 # run the code if the node is called
 if __name__ == '__main__':
