@@ -19,10 +19,14 @@ class joint_angles:
         self.spheres2=np.zeros((4,3))
         self.jointsactual = np.array([0.0,0.0,0.0,0.0])
         self.jointsest = np.array([0.0,0.0,0.0,0.0])
+        self.target1 = np.array([0.0,0.0])
+        self.target2 = np.array([0.0,0.0])
         #self.jointsactual=np.array([])
         self.pos1 = rospy.Subscriber("camera1/robot/spheres_pos",Float64MultiArray, self.callback1)
         self.pos2 = rospy.Subscriber("camera2/robot/spheres_pos",Float64MultiArray, self.callback2)
         self.anglesactual = rospy.Subscriber('/robot/joint_states', JointState, self.callback3)
+        self.targetpos1 = rospy.Subscriber("camera1/robot/target_pos",Float64MultiArray, self.callback4)
+        self.targetpos2 = rospy.Subscriber("camera2/robot/target_pos",Float64MultiArray, self.callback5)
         #self.joint2 = rospy.Subscriber("robot/joint2_position_controller/command",Float64MultiArray, self.callback2)
         self.time_trajectory = rospy.get_time()
         # initialize errors
@@ -41,6 +45,12 @@ class joint_angles:
 
     def callback3(self, data):
         self.jointsactual = data.position
+
+    def callback4(self, data):
+        self.target1= data.data
+
+    def callback5(self, data):
+        self.target2= data.data
 
     def translate(self, a,x,y,z):
         a_1 = np.concatenate((a, [1]))
@@ -84,6 +94,9 @@ class joint_angles:
         # For the blue joint the only possible coordinates are [0, 0, 2]
         print(np.array([yellow-yellow, np.array([0, 0, 2]), green, red]))
         return np.array([yellow-yellow, np.array([0, 0, 2]), green, red])
+
+    def target3d(self):
+        return np.array([self.target2[0],self.target1[0], np.mean(self.target1[1],self.target2[1]])
     
     def jointcalc(self):
         points = self.points3d()

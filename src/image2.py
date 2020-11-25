@@ -150,6 +150,7 @@ class image_converter:
     b = self.detect_joints(self.cv_image)
     print(b[3])
     c = self.detect_target(self.cv_image)
+    c = (b[0] - (c * self.pixel2meter(self.cv_image)))  * np.array([-1, 1])
     cv2.waitKey(1)
 
     #self.joints = Float64MultiArray()
