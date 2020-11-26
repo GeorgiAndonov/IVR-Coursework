@@ -104,11 +104,11 @@ class joint_angles:
         #return np.array([yellow,blue,green,red])
 
         # For the blue joint the only possible coordinates are [0, 0, 2]
-        print(np.array([yellow-yellow, np.array([0, 0, 2]), green, red]))
+        #print(np.array([yellow-yellow, np.array([0, 0, 2]), green, red]))
         return np.array([yellow-yellow, np.array([0, 0, 2]), green, red])
 
     def target3d(self):
-        return np.array([self.target2[0],self.target1[0], np.mean(self.target1[1],self.target2[1]])
+        return np.array([self.target2[0],self.target1[0], np.mean(self.target1[1],self.target2[1])])
     
     def jointcalc(self):
         points = self.points3d()
@@ -215,14 +215,22 @@ def main(args):
     rate = rospy.Rate(1)
     jang = joint_angles()
     i = 0
-    angles = []
+    actangles = []
+    estangles = []
     while ((len(jang.spheres1)==0) or (len(jang.spheres2)==0)):
         rate.sleep()
-    while not (rospy.is_shutdown() or (i>=50)):
-        angles.append([jang.jointsactual[2], jang.jointcalc()[2]])
+    while not (rospy.is_shutdown() or (i>=180)):
+        actangles.append(jang.jointsactual[1])
+        estangles.append(jang.jointcalc()[1])
+        print(i)
         rate.sleep()
         i+=1
-    plt.plot(angles)
+    plt.plot(actangles, label='Actual angles')
+    plt.plot(estangles, label='Estimated angles')
+    plt.xlabel('Time (seconds)')
+    plt.ylabel('Angle (radians)')
+    plt.legend()
+    plt.title('Actual angles versus CV estimated angles - joint 2')
     plt.show()
     rospy.spin()
     print("Shutting down")

@@ -32,9 +32,9 @@ class image_converter:
       return self.detect_chamfer(mask)
 
   def detect_chamfer(self,image):
-      chamfer = cv2.imread('chamfer.png')
+      chamfer = cv2.imread('src/ivr_assignment/src/chamfer.png')
       chamfer = cv2.cvtColor(chamfer, cv2.COLOR_BGR2GRAY)
-      match = cv2.matchTemplate(mask, chamfer, 1)
+      match = cv2.matchTemplate(image, chamfer, cv2.TM_CCOEFF_NORMED)
       return np.array(cv2.minMaxLoc(match)[2])
     
 
@@ -150,9 +150,9 @@ class image_converter:
     #a = self.detect_joint_angles(self.cv_image)
     #b = self.detect_sphere_locations(self.cv_image)
     b = self.detect_joints(self.cv_image)
-    print(b[3])
+    #print(b[3])
     c = self.detect_target(self.cv_image)
-    c = (b[0] - (c * self.pixel2meter(self.cv_image)))  * np.array([-1, 1])
+    c = (b[0] - (c.astype(float) * self.pixel2meter(self.cv_image))).astype(int)  * np.array([-1, 1])
     cv2.waitKey(1)
 
     #self.joints = Float64MultiArray()
