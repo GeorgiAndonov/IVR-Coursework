@@ -28,6 +28,7 @@ class image_converter:
     # initialize the bridge between openCV and ROS
     self.bridge = CvBridge()
 
+  # Detect target
   def detect_target(self,image):
       mask = cv2.inRange(image, (0, 40, 100), (100, 100, 255))
       return self.detect_chamfer(mask)
@@ -38,6 +39,7 @@ class image_converter:
       match = cv2.matchTemplate(image, chamfer, cv2.TM_CCOEFF_NORMED)
       return np.array(cv2.minMaxLoc(match)[2])
 
+  # Detect joints
   def detect_red(self,image):
       mask = cv2.inRange(image, (0, 0, 100), (0, 0, 255))
       kernel = np.ones((5, 5), np.uint8)
@@ -102,6 +104,7 @@ class image_converter:
       dist = np.sum((circle1Pos - circle2Pos)**2)
       return 2.5 / np.sqrt(dist)
 
+  # Test function
   def detect_sphere_locations(self, image):
     a = self.pixel2meter(image)
     # Obtain the centre of each coloured blob 
@@ -111,6 +114,7 @@ class image_converter:
     circle3Pos = a * self.detect_red(image)
     return np.array([center, circle1Pos, circle2Pos, circle3Pos])
 
+  # Get the joints
   def detect_joints(self, image):
     a = self.pixel2meter(image)
     center = a * self.detect_yellow(image)
@@ -124,16 +128,19 @@ class image_converter:
     green_to_yellow = center - green_pos
     green_to_yellow = green_to_yellow * np.array([-1, 1])
 
-    red_pos = a * self.detect_red(image)
-    red_to_yellow = center - red_pos
-    red_to_yellow = red_to_yellow * np.array([-1, 1])
+    red_to_yellow = self.detect_end_effector(image)
 
     return np.array([center, blue_to_yellow, green_to_yellow, red_to_yellow])
 
   def detect_end_effector(self, image):
     a = self.pixel2meter(image)
-    end_effector = a * (self.detect_yellow(image) - self.detect_red(image))
-    return end_effector
+    red_coord = self.detect_red(image)
+    # In case it is not visible
+    if red_coord[0] == 0 and red_coord[1] == 0:
+        return red_coord
+    else:
+        end_effector = a * (self.detect_yellow(image) - red_coord)
+        return end_effector * np.array([-1, 1])
 
   # Recieve data, process it, and publish
   def callback2(self,data):
@@ -147,9 +154,12 @@ class image_converter:
     #im2=cv2.imshow('window2', self.cv_image)
     #a = self.detect_joint_angles(self.cv_image)
     #b = self.detect_sphere_locations(self.cv_image)
+
+    # Get and publish the results
     b = self.detect_joints(self.cv_image)
+    print(b[3])
     c = self.detect_target(self.cv_image)
-    c = (b[0] - (c.astype(float) * self.pixel2meter(self.cv_image)))  * np.array([-1, 1])
+    c = (b[0] - (c.astype(float) * self.pixel2meter(self.cv_image)))
     cv2.waitKey(1)
 
     #self.joints = Float64MultiArray()
